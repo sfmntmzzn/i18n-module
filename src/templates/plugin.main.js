@@ -150,7 +150,7 @@ export default async (context) => {
     app.i18n.__baseUrl = resolveBaseUrl(baseUrl, context)
 
     const finalLocale =
-      (detectBrowserLanguage && doDetectBrowserLanguage()) ||
+      (detectBrowserLanguage && doDetectBrowserLanguage(route)) ||
       getLocaleFromRoute(route) || app.i18n.locale || app.i18n.defaultLocale || ''
 
     await app.i18n.setLocale(finalLocale)
@@ -158,13 +158,17 @@ export default async (context) => {
     return [null, null]
   }
 
-  const doDetectBrowserLanguage = () => {
+  const doDetectBrowserLanguage = route => {
     // Browser detection is ignored if it is a nuxt generate.
     if (process.static && process.server) {
       return false
     }
 
-    const { alwaysRedirect, fallbackLocale } = detectBrowserLanguage
+    const { alwaysRedirect, detectOnlyOnRoot, fallbackLocale } = detectBrowserLanguage
+
+    if (!alwaysRedirect && strategy !== STRATEGIES.NO_PREFIX && detectOnlyOnRoot && route.path !== '/') {
+      return false
+    }
 
     let matchedLocale
 
@@ -228,7 +232,7 @@ export default async (context) => {
     }
   }
 
-  let finalLocale = detectBrowserLanguage && doDetectBrowserLanguage()
+  let finalLocale = detectBrowserLanguage && doDetectBrowserLanguage(route)
 
   if (!finalLocale) {
     if (vuex && vuex.syncLocale && store && store.state[vuex.moduleName].locale !== '') {

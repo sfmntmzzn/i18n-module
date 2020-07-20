@@ -32,6 +32,7 @@ declare namespace NuxtVueI18n {
       cookieDomain?: string | null
       cookieKey?: string
       alwaysRedirect?: boolean
+      detectOnlyOnRoot?: boolean
       fallbackLocale?: Locale | null
     }
 

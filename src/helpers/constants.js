@@ -35,6 +35,7 @@ exports.DEFAULT_OPTIONS = {
     cookieDomain: null,
     cookieKey: 'i18n_redirected',
     alwaysRedirect: false,
+    detectOnlyOnRoot: false,
     fallbackLocale: ''
   },
   differentDomains: false,

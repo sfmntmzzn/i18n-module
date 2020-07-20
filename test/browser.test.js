@@ -547,7 +547,52 @@ describe(`${browserString} (SPA with router in hash mode)`, () => {
   })
 })
 
-describe(`${browserString} (alwaysRedirect)`, () => {
+describe(`${browserString} (detectOnlyOnRoot + alwaysRedirect + no_prefix)`, () => {
+  /** @type {Nuxt} */
+  let nuxt
+  /** @type {import('playwright-chromium').ChromiumBrowser} */
+  let browser
+
+  beforeAll(async () => {
+    const overrides = {
+      i18n: {
+        defaultLocale: 'en',
+        strategy: 'no_prefix',
+        detectBrowserLanguage: {
+          useCookie: false,
+          alwaysRedirect: true,
+          detectOnlyOnRoot: true
+        }
+      }
+    }
+
+    nuxt = (await setup(loadConfig(__dirname, 'basic', overrides, { merge: true }))).nuxt
+    browser = await createBrowser()
+  })
+
+  afterAll(async () => {
+    if (browser) {
+      await browser.close()
+    }
+    await nuxt.close()
+  })
+
+  test('ignores detectOnlyOnRoot when navigating to root path', async () => {
+    const page = await browser.newPage({ locale: 'fr' })
+    await page.goto(url('/'))
+    expect(await (await page.$('body'))?.textContent()).toContain('locale: fr')
+  })
+
+  test('ignores detectOnlyOnRoot when navigating to sub-path', async () => {
+    const page = await browser.newPage({ locale: 'fr' })
+    await page.goto(url('/about'))
+    expect(await (await page.$('#current-page'))?.textContent()).toContain('page: À propos')
+    // Custom paths are not supported in "no_prefix" strategy.
+    // expect(await getRouteFullPath(page)).toBe('/a-propos')
+  })
+})
+
+describe(`${browserString} (alwaysRedirect, prefix)`, () => {
   /** @type {Nuxt} */
   let nuxt
   /** @type {import('playwright-chromium').ChromiumBrowser} */
@@ -582,6 +627,107 @@ describe(`${browserString} (alwaysRedirect)`, () => {
     await page.goto(url('/'))
     await navigate(page, '/fr')
     expect(await (await page.$('body'))?.textContent()).toContain('locale: fr')
+  })
+})
+
+describe(`${browserString} (detectOnlyOnRoot + prefix_except_default)`, () => {
+  /** @type {Nuxt} */
+  let nuxt
+  /** @type {import('playwright-chromium').ChromiumBrowser} */
+  let browser
+
+  beforeAll(async () => {
+    const overrides = {
+      i18n: {
+        defaultLocale: 'en',
+        strategy: 'prefix_except_default',
+        detectBrowserLanguage: {
+          detectOnlyOnRoot: true
+        }
+      }
+    }
+
+    nuxt = (await setup(loadConfig(__dirname, 'basic', overrides, { merge: true }))).nuxt
+    browser = await createBrowser()
+  })
+
+  afterAll(async () => {
+    if (browser) {
+      await browser.close()
+    }
+    await nuxt.close()
+  })
+
+  test('redirects to detected locale on root path', async () => {
+    const page = await browser.newPage({ locale: 'fr' })
+    await page.goto(url('/'))
+    await navigate(page, '/fr')
+    expect(await (await page.$('body'))?.textContent()).toContain('locale: fr')
+  })
+
+  test('does not detect locale and redirect on non-root path', async () => {
+    const page = await browser.newPage({ locale: 'fr' })
+    await page.goto(url('/simple'))
+    expect(await (await page.$('#container'))?.textContent()).toContain('Homepage')
+    expect(await getRouteFullPath(page)).toBe('/simple')
+  })
+
+  test('does not detect locale and redirect on non-root, custom path', async () => {
+    const page = await browser.newPage({ locale: 'en' })
+    await page.goto(url('/fr/a-propos'))
+    expect(await (await page.$('#current-page'))?.textContent()).toContain('page: À propos')
+    expect(await getRouteFullPath(page)).toBe('/fr/a-propos')
+  })
+})
+
+describe(`${browserString} (detectOnlyOnRoot + alwaysRedirect + prefix_except_default)`, () => {
+  /** @type {Nuxt} */
+  let nuxt
+  /** @type {import('playwright-chromium').ChromiumBrowser} */
+  let browser
+
+  beforeAll(async () => {
+    const overrides = {
+      i18n: {
+        defaultLocale: 'en',
+        strategy: 'prefix_except_default',
+        detectBrowserLanguage: {
+          alwaysRedirect: true,
+          detectOnlyOnRoot: true
+        }
+      }
+    }
+
+    nuxt = (await setup(loadConfig(__dirname, 'basic', overrides, { merge: true }))).nuxt
+    browser = await createBrowser()
+  })
+
+  afterAll(async () => {
+    if (browser) {
+      await browser.close()
+    }
+    await nuxt.close()
+  })
+
+  test('redirects to detected locale on root path', async () => {
+    const page = await browser.newPage({ locale: 'fr' })
+    await page.goto(url('/'))
+    await navigate(page, '/fr')
+    expect(await (await page.$('body'))?.textContent()).toContain('locale: fr')
+  })
+
+  test('redirects to detected locale and redirect on non-root path', async () => {
+    const page = await browser.newPage({ locale: 'fr' })
+    await page.goto(url('/simple'))
+    expect(await (await page.$('#container'))?.textContent()).toContain('Accueil')
+    expect(await getRouteFullPath(page)).toBe('/fr/simple')
+  })
+
+  test('redirects to detected locale and redirect on non-root, custom path', async () => {
+    const page = await browser.newPage({ locale: 'en' })
+    await page.goto(url('/fr/a-propos'))
+    expect(await (await page.$('#current-page'))?.textContent()).toContain('page: About us')
+    expect(await getRouteFullPath(page)).toBe('/about-us')
   })
 })
 
